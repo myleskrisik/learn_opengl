@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:strings"
+import "core:math"
 import sdl "vendor:sdl3"
 import gl "vendor:OpenGL"
 
@@ -148,6 +149,12 @@ main :: proc() {
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 
+	vertices := []f32 {
+		-0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
+		0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
+		0.0, 0.5, 0.0, 0.0, 0.0, 1.0
+	}
+
 	square_vertices := []f32 {
 		0.5, 0.5, 0.0, // top right
 		0.5, -0.5, 0.0, // bottom right
@@ -171,15 +178,19 @@ main :: proc() {
 
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
-		len(two_triangles_vertices) * size_of(two_triangles_vertices),
-		raw_data(two_triangles_vertices),
+		len(vertices) * size_of(vertices),
+		raw_data(vertices),
 		gl.STATIC_DRAW
 	)
 
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices) * size_of(indices), raw_data(indices), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
+
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.EnableVertexAttribArray(1)
+
 
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
 	gl.BindVertexArray(0)
@@ -206,7 +217,6 @@ main :: proc() {
 	)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
-
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 	gl.BindVertexArray(0)
 
@@ -252,14 +262,21 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
+		vertex_x_offset_location := gl.GetUniformLocation(shader_program, "xOffset")
 		gl.UseProgram(shader_program)
-		gl.BindVertexArray(vao_0)
+		gl.Uniform1f(vertex_x_offset_location, 0.6)
+		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
+		// gl.UseProgram(shader_program)
+		// gl.BindVertexArray(vao_0)
+		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
-		gl.UseProgram(shader_program_0)
-		gl.BindVertexArray(vao_1)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+
+		// gl.UseProgram(shader_program_0)
+		// gl.BindVertexArray(vao_1)
+		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
+
 		// gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(0))
 
 		sdl.GL_SwapWindow(window)	
@@ -269,19 +286,29 @@ main :: proc() {
 vertex_shader_source: cstring = `#version 330 core
 
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 ourColor;
+out vec4 vertexPosition;
+
+uniform float xOffset;
 
 void main()
 {
-	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+	gl_Position = vec4(aPos.x + xOffset, aPos.yz, 1.0);
+	vertexPosition = gl_Position;
+	ourColor = aColor;
 }
 `
 
 fragment_shader_source: cstring = `#version 330 core
 out vec4 FragColor;
+in vec3 ourColor;
+in vec4 vertexPosition;
 
 void main()
 {
-	FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+	FragColor = vertexPosition;
 }
 `
 
