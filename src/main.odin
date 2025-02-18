@@ -5,6 +5,7 @@ import "core:strings"
 import "core:math"
 import sdl "vendor:sdl3"
 import gl "vendor:OpenGL"
+import stbi "vendor:stb/image"
 
 SCREEN_SIZE :: [2]i32{800, 600}
 
@@ -38,7 +39,7 @@ main :: proc() {
 
 	gl.Viewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y)
 
-		// Compile vertex shader
+	// Compile vertex shader
 	vertex_shader := gl.CreateShader(gl.VERTEX_SHADER)
 	gl.ShaderSource(vertex_shader, 1, &vertex_shader_source, nil)
 	gl.CompileShader(vertex_shader)
@@ -139,17 +140,15 @@ main :: proc() {
 	gl.DeleteShader(fragment_shader)
 	gl.DeleteShader(fragment_shader_0)
 
-	vao: u32
-	gl.GenVertexArrays(1, &vao)
-	gl.BindVertexArray(vao)
-
-	vbo, ebo: u32
-	gl.GenBuffers(1, &vbo)
-	gl.GenBuffers(1, &ebo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-
 	vertices := []f32 {
+		// positions     // colors        //texture coords
+		0.5, 0.5, 0.0,   1.0, 0.0, 0.0,   0.6, 0.6, // top right
+		0.5, -0.5, 0.0,  0.0, 1.0, 0.0,   0.6, 0.3, // bottom right
+		-0.5, -0.5, 0.0, 0.0, 0.0, 1.0,   0.3, 0.3, // bottom left
+		-0.5, 0.5, 0.0,  1.0, 1.0, 0.0,   0.3, 0.6, // top left
+	}
+
+	triangle_vertices := []f32 {
 		-0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
 		0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
 		0.0, 0.5, 0.0, 0.0, 0.0, 1.0
@@ -176,6 +175,21 @@ main :: proc() {
 		1, 2, 3
 	}
 
+	text_coords := []f32 {
+		0.0, 0.0,
+		1.0, 0.0,
+		0.5, 1.0,
+	}
+
+
+	vbo, ebo, vao: u32
+	gl.GenVertexArrays(1, &vao)
+	gl.GenBuffers(1, &vbo)
+	gl.GenBuffers(1, &ebo)
+
+	gl.BindVertexArray(vao)
+
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
 		len(vertices) * size_of(vertices),
@@ -183,69 +197,67 @@ main :: proc() {
 		gl.STATIC_DRAW
 	)
 
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices) * size_of(indices), raw_data(indices), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(3 * size_of(f32)))
 	gl.EnableVertexAttribArray(1)
 
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 8 * size_of(f32), uintptr(6 * size_of(f32)))
+	gl.EnableVertexAttribArray(2)
 
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0)
-	gl.BindVertexArray(0)
+	texture1: u32
+	gl.GenTextures(1, &texture1)
+	gl.BindTexture(gl.TEXTURE_2D, texture1)
 
-	// Setup triangle 0
-	vao_0: u32
-	gl.GenVertexArrays(1, &vao_0)
-	gl.BindVertexArray(vao_0)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
-	vbo_0: u32
-	gl.GenBuffers(1, &vbo_0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo_0)
-	triangle_0_vertices := []f32 {
-		-0.5, 0, 0,
-		-0.25, 0, 0,
-		-0.375, 0.25, 0,	
+	{
+		width, height, nr_channels: i32
+		data := stbi.load("container.jpg", &width, &height, &nr_channels, 0)
+
+		if data == nil {
+			fmt.printfln("failed to load image")
+			return
+		}
+
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
 	}
 
-	gl.BufferData(
-		gl.ARRAY_BUFFER,
-		len(triangle_0_vertices) * size_of(triangle_0_vertices),
-		raw_data(triangle_0_vertices),
-		gl.STATIC_DRAW
-	)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3 * size_of(f32), uintptr(0))
-	gl.EnableVertexAttribArray(0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-	gl.BindVertexArray(0)
 
-	// Setup triangle 1
-	vao_1: u32
-	gl.GenVertexArrays(1, &vao_1)
-	gl.BindVertexArray(vao_1)
+	texture2: u32
+	gl.GenTextures(1, &texture2)
+	gl.BindTexture(gl.TEXTURE_2D, texture2)
 
-	vbo_1: u32
-	gl.GenBuffers(1, &vbo_1)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo_1)
-	triangle_1_vertices := []f32 {
-		0.25, 0, 0,
-		0.5, 0, 0,
-		0.375, 0.25, 0
+	{
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+
+		width, height, nr_channels: i32
+		stbi.set_flip_vertically_on_load(1)
+		data := stbi.load("awesomeface.png", &width, &height, &nr_channels, 0)
+
+		if data == nil {
+			fmt.printfln("failed to load image")
+			return
+		}
+
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
 	}
 
-	gl.BufferData(
-		gl.ARRAY_BUFFER,
-		len(triangle_1_vertices) * size_of(triangle_1_vertices),
-		raw_data(triangle_1_vertices),
-		gl.STATIC_DRAW
-	)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3 * size_of(f32), uintptr(0))
-	gl.EnableVertexAttribArray(0)
-
-	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-	gl.BindVertexArray(0)	
-
+	gl.UseProgram(shader_program)
+	gl.Uniform1i(gl.GetUniformLocation(shader_program, "texture1"), 0)
+	gl.Uniform1i(gl.GetUniformLocation(shader_program, "texture2"), 1)
 
 	loop: for {
 		for e: sdl.Event; sdl.PollEvent(&e); {
@@ -262,11 +274,15 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		vertex_x_offset_location := gl.GetUniformLocation(shader_program, "xOffset")
-		gl.UseProgram(shader_program)
-		gl.Uniform1f(vertex_x_offset_location, 0.6)
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, texture1)
+		gl.ActiveTexture(gl.TEXTURE1)
+		gl.BindTexture(gl.TEXTURE_2D, texture2)
+
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
+		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
 		// gl.UseProgram(shader_program)
 		// gl.BindVertexArray(vao_0)
@@ -277,7 +293,7 @@ main :: proc() {
 		// gl.BindVertexArray(vao_1)
 		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
-		// gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(0))
+
 
 		sdl.GL_SwapWindow(window)	
 	}
@@ -287,28 +303,33 @@ vertex_shader_source: cstring = `#version 330 core
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
+layout (location = 2) in vec2 aTexCoord;
 
 out vec3 ourColor;
-out vec4 vertexPosition;
+out vec2 TexCoord;
 
 uniform float xOffset;
 
 void main()
 {
-	gl_Position = vec4(aPos.x + xOffset, aPos.yz, 1.0);
-	vertexPosition = gl_Position;
+	gl_Position = vec4(aPos, 1.0);
 	ourColor = aColor;
+	TexCoord = aTexCoord;
 }
 `
 
 fragment_shader_source: cstring = `#version 330 core
 out vec4 FragColor;
+
 in vec3 ourColor;
-in vec4 vertexPosition;
+in vec2 TexCoord;
+
+uniform sampler2D texture1;
+uniform sampler2D texture2;
 
 void main()
 {
-	FragColor = vertexPosition;
+	FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);
 }
 `
 
