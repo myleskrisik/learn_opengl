@@ -38,7 +38,7 @@ main :: proc() {
 	gl_context := sdl.GL_CreateContext(window)
 
 	gl.load_up_to(GL_VERSION_MAJOR, GL_VERSION_MINOR, sdl.gl_set_proc_address)
-
+	gl.Enable(gl.DEPTH_TEST)
 	gl.Viewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y)
 
 	program, program_ok := gl.load_shaders_file("shader.vert", "shader.frag")
@@ -48,23 +48,53 @@ main :: proc() {
 	}
 
 	vertices := []f32 {
-		// positions     // colors        //texture coords
-		0.5, 0.5, 0.0,   1.0, 0.0, 0.0,   1, 1, // top right
-		0.5, -0.5, 0.0,  0.0, 1.0, 0.0,   1, 0, // bottom right
-		-0.5, -0.5, 0.0, 0.0, 0.0, 1.0,   0, 0, // bottom left
-		-0.5, 0.5, 0.0,  1.0, 1.0, 0.0,   0, 1, // top left
+	    -0.5, -0.5, -0.5,  0.0, 0.0,
+	     0.5, -0.5, -0.5,  1.0, 0.0,
+	     0.5,  0.5, -0.5,  1.0, 1.0,
+	     0.5,  0.5, -0.5,  1.0, 1.0,
+	    -0.5,  0.5, -0.5,  0.0, 1.0,
+	    -0.5, -0.5, -0.5,  0.0, 0.0,
+
+	    -0.5, -0.5,  0.5,  0.0, 0.0,
+	     0.5, -0.5,  0.5,  1.0, 0.0,
+	     0.5,  0.5,  0.5,  1.0, 1.0,
+	     0.5,  0.5,  0.5,  1.0, 1.0,
+	    -0.5,  0.5,  0.5,  0.0, 1.0,
+	    -0.5, -0.5,  0.5,  0.0, 0.0,
+
+	    -0.5,  0.5,  0.5,  1.0, 0.0,
+	    -0.5,  0.5, -0.5,  1.0, 1.0,
+	    -0.5, -0.5, -0.5,  0.0, 1.0,
+	    -0.5, -0.5, -0.5,  0.0, 1.0,
+	    -0.5, -0.5,  0.5,  0.0, 0.0,
+	    -0.5,  0.5,  0.5,  1.0, 0.0,
+
+	     0.5,  0.5,  0.5,  1.0, 0.0,
+	     0.5,  0.5, -0.5,  1.0, 1.0,
+	     0.5, -0.5, -0.5,  0.0, 1.0,
+	     0.5, -0.5, -0.5,  0.0, 1.0,
+	     0.5, -0.5,  0.5,  0.0, 0.0,
+	     0.5,  0.5,  0.5,  1.0, 0.0,
+
+	    -0.5, -0.5, -0.5,  0.0, 1.0,
+	     0.5, -0.5, -0.5,  1.0, 1.0,
+	     0.5, -0.5,  0.5,  1.0, 0.0,
+	     0.5, -0.5,  0.5,  1.0, 0.0,
+	    -0.5, -0.5,  0.5,  0.0, 0.0,
+	    -0.5, -0.5, -0.5,  0.0, 1.0,
+
+	    -0.5,  0.5, -0.5,  0.0, 1.0,
+	     0.5,  0.5, -0.5,  1.0, 1.0,
+	     0.5,  0.5,  0.5,  1.0, 0.0,
+	     0.5,  0.5,  0.5,  1.0, 0.0,
+	    -0.5,  0.5,  0.5,  0.0, 0.0,
+	    -0.5,  0.5, -0.5,  0.0, 1.0
 	}
 
-	indices := []u32 {
-		0, 1, 3,
-		1, 2, 3
-	}
 
-
-	vbo, ebo, vao: u32
+	vbo, vao: u32
 	gl.GenVertexArrays(1, &vao)
 	gl.GenBuffers(1, &vbo)
-	gl.GenBuffers(1, &ebo)
 
 	gl.BindVertexArray(vao)
 
@@ -76,17 +106,12 @@ main :: proc() {
 		gl.STATIC_DRAW
 	)
 
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices) * size_of(indices), raw_data(indices), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(3 * size_of(f32)))
 	gl.EnableVertexAttribArray(1)
-
-	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 8 * size_of(f32), uintptr(6 * size_of(f32)))
-	gl.EnableVertexAttribArray(2)
 
 	texture1: u32
 	gl.GenTextures(1, &texture1)
@@ -138,6 +163,24 @@ main :: proc() {
 	gl.Uniform1i(uniforms["texture1"].location, 0)
 	gl.Uniform1i(uniforms["texture2"].location, 1)
 
+	view := glm.identity(glm.mat4)
+	view = glm.mat4Translate({0, 0, -3}) * view
+
+	projection := glm.mat4Perspective(glm.radians_f32(45), 800.0 / 600.0, 0.1, 100.0)
+
+	cube_positions := []glm.vec3 {
+		{0, 0, 0},
+	    { 2.0,  5.0, -15.0},
+	    {-1.5, -2.2, -2.5},
+	    {-3.8, -2.0, -12.3},
+	    { 2.4, -0.4, -3.5},
+	    {-1.7,  3.0, -7.5},
+	    { 1.3, -2.0, -2.5},
+	    { 1.5,  2.0, -2.5},
+	    { 1.5,  0.2, -1.5},
+	    {-1.3,  1.0, -1.5},
+	}
+
 	start_tick := time.tick_now()
 	loop: for {
 		duration := time.tick_since(start_tick)
@@ -154,7 +197,7 @@ main :: proc() {
 
 		// Draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 
 		gl.ActiveTexture(gl.TEXTURE0)
@@ -163,25 +206,20 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		gl.BindVertexArray(vao)
-		{
-			trans := glm.identity(glm.mat4)
-			trans = trans * glm.mat4Translate({0.5, -0.5, 0})
-			trans = trans * glm.mat4Rotate({0, 0, 1}, t)
-			gl.UniformMatrix4fv(uniforms["transform"].location, 1, false, &trans[0, 0])
+		gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+		gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
+		for cube_position, i in cube_positions {
 
-			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
+			model := glm.identity(glm.mat4)
+			model = model * glm.mat4Translate(cube_position)
+			angle := 20.0 * f32(i + 1)
+			if i % 3 == 0 do angle *= math.sin(t)
+			model = model * glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
+			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])				
+
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
-		{
-			trans := glm.identity(glm.mat4)
-			s := math.sin(t)
-			trans = trans * glm.mat4Scale({s, s, 0})
-			trans = trans * glm.mat4Translate({-0.5, 0.5, 0})
-
-
-			gl.UniformMatrix4fv(uniforms["transform"].location, 1, false, &trans[0, 0])
-			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
-		}
 
 
 		sdl.GL_SwapWindow(window)	
