@@ -3,9 +3,11 @@ package main
 import "core:fmt"
 import "core:strings"
 import "core:math"
+import "core:time"
 import sdl "vendor:sdl3"
 import gl "vendor:OpenGL"
 import stbi "vendor:stb/image"
+import glm "core:math/linalg/glsl"
 
 SCREEN_SIZE :: [2]i32{800, 600}
 
@@ -39,146 +41,23 @@ main :: proc() {
 
 	gl.Viewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y)
 
-	// Compile vertex shader
-	vertex_shader := gl.CreateShader(gl.VERTEX_SHADER)
-	gl.ShaderSource(vertex_shader, 1, &vertex_shader_source, nil)
-	gl.CompileShader(vertex_shader)
-	// Check if vertex compilation succeeded
-	{
-		success: i32
-		gl.GetShaderiv(vertex_shader, gl.COMPILE_STATUS, &success)
-		if success == 0 {
-			info_log: [512]u8
-			len: i32
-			gl.GetShaderInfoLog(vertex_shader, 512, &len, raw_data(&info_log))
-		    err := strings.string_from_ptr(raw_data(&info_log), int(len))
-
-		    fmt.printfln("Vertex Shader Compilation Error:\n%v", err)
-		    return
-		}
+	program, program_ok := gl.load_shaders_file("shader.vert", "shader.frag")
+	if !program_ok {
+		fmt.eprintfln("Failed to create GLSL Program")
+		return
 	}
-
-
-	// Compile fragment shader
-	fragment_shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader, 1, &fragment_shader_source, nil)
-	gl.CompileShader(fragment_shader)
-	// Check if fragment compilation succeeded
-	{
-		success: i32
-		gl.GetShaderiv(fragment_shader, gl.COMPILE_STATUS, &success)
-		if success == 0 {
-			info_log: [512]u8
-			len: i32
-			gl.GetShaderInfoLog(fragment_shader, 512, &len, raw_data(&info_log))
-		    err := strings.string_from_ptr(raw_data(&info_log), int(len))
-
-		    fmt.printfln("Fragment Shader Compilation Error:\n%v", err)
-		    return
-		}
-	}
-
-	// Compile fragment shader
-	fragment_shader_0 := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader_0, 1, &fragment_shader_0_source, nil)
-	gl.CompileShader(fragment_shader_0)
-	// Check if fragment compilation succeeded
-	{
-		success: i32
-		gl.GetShaderiv(fragment_shader_0, gl.COMPILE_STATUS, &success)
-		if success == 0 {
-			info_log: [512]u8
-			len: i32
-			gl.GetShaderInfoLog(fragment_shader_0, 512, &len, raw_data(&info_log))
-		    err := strings.string_from_ptr(raw_data(&info_log), int(len))
-
-		    fmt.printfln("Fragment Shader Compilation Error:\n%v", err)
-		    return
-		}
-	}	
-
-	// Create shader program
-	shader_program := gl.CreateProgram()
-	gl.AttachShader(shader_program, vertex_shader)
-	gl.AttachShader(shader_program, fragment_shader)
-	gl.LinkProgram(shader_program)
-	// Check if Program linking succeeded
-	{
-		success: i32
-		gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success)
-		if success == 0 {
-			info_log: [512]u8
-			len: i32
-			gl.GetProgramInfoLog(shader_program, 512, &len, raw_data(&info_log))
-			err := strings.string_from_ptr(raw_data(&info_log), int(len))
-
-			fmt.printfln("Shader program linking failed:\n%v", err)
-			return
-		}
-	}
-
-	// Create shader program
-	shader_program_0 := gl.CreateProgram()
-	gl.AttachShader(shader_program_0, vertex_shader)
-	gl.AttachShader(shader_program_0, fragment_shader_0)
-	gl.LinkProgram(shader_program_0)
-	// Check if Program linking succeeded
-	{
-		success: i32
-		gl.GetProgramiv(shader_program_0, gl.LINK_STATUS, &success)
-		if success == 0 {
-			info_log: [512]u8
-			len: i32
-			gl.GetProgramInfoLog(shader_program_0, 512, &len, raw_data(&info_log))
-			err := strings.string_from_ptr(raw_data(&info_log), int(len))
-
-			fmt.printfln("Shader program linking failed:\n%v", err)
-			return
-		}
-	}
-	gl.DeleteShader(vertex_shader)
-	gl.DeleteShader(fragment_shader)
-	gl.DeleteShader(fragment_shader_0)
 
 	vertices := []f32 {
 		// positions     // colors        //texture coords
-		0.5, 0.5, 0.0,   1.0, 0.0, 0.0,   0.6, 0.6, // top right
-		0.5, -0.5, 0.0,  0.0, 1.0, 0.0,   0.6, 0.3, // bottom right
-		-0.5, -0.5, 0.0, 0.0, 0.0, 1.0,   0.3, 0.3, // bottom left
-		-0.5, 0.5, 0.0,  1.0, 1.0, 0.0,   0.3, 0.6, // top left
-	}
-
-	triangle_vertices := []f32 {
-		-0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
-		0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
-		0.0, 0.5, 0.0, 0.0, 0.0, 1.0
-	}
-
-	square_vertices := []f32 {
-		0.5, 0.5, 0.0, // top right
-		0.5, -0.5, 0.0, // bottom right
-		-0.5, -0.5, 0.0, // bottom left
-		-0.5, 0.5, 0.0 // top left
-	}
-
-	two_triangles_vertices := []f32 {
-		-0.5, 0, 0,
-		-0.25, 0, 0,
-		-0.375, 0.25, 0,
-		0.25, 0, 0,
-		0.5, 0, 0,
-		0.375, 0.25, 0
+		0.5, 0.5, 0.0,   1.0, 0.0, 0.0,   1, 1, // top right
+		0.5, -0.5, 0.0,  0.0, 1.0, 0.0,   1, 0, // bottom right
+		-0.5, -0.5, 0.0, 0.0, 0.0, 1.0,   0, 0, // bottom left
+		-0.5, 0.5, 0.0,  1.0, 1.0, 0.0,   0, 1, // top left
 	}
 
 	indices := []u32 {
 		0, 1, 3,
 		1, 2, 3
-	}
-
-	text_coords := []f32 {
-		0.0, 0.0,
-		1.0, 0.0,
-		0.5, 1.0,
 	}
 
 
@@ -217,7 +96,6 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-
 	{
 		width, height, nr_channels: i32
 		data := stbi.load("container.jpg", &width, &height, &nr_channels, 0)
@@ -235,7 +113,6 @@ main :: proc() {
 	texture2: u32
 	gl.GenTextures(1, &texture2)
 	gl.BindTexture(gl.TEXTURE_2D, texture2)
-
 	{
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
@@ -255,11 +132,16 @@ main :: proc() {
 		gl.GenerateMipmap(gl.TEXTURE_2D)
 	}
 
-	gl.UseProgram(shader_program)
-	gl.Uniform1i(gl.GetUniformLocation(shader_program, "texture1"), 0)
-	gl.Uniform1i(gl.GetUniformLocation(shader_program, "texture2"), 1)
+	gl.UseProgram(program)
 
+	uniforms := gl.get_uniforms_from_program(program)
+	gl.Uniform1i(uniforms["texture1"].location, 0)
+	gl.Uniform1i(uniforms["texture2"].location, 1)
+
+	start_tick := time.tick_now()
 	loop: for {
+		duration := time.tick_since(start_tick)
+		t := f32(time.duration_seconds(duration))
 		for e: sdl.Event; sdl.PollEvent(&e); {
 			#partial switch e.type {
 			case .QUIT:
@@ -281,63 +163,27 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		gl.BindVertexArray(vao)
-		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
-		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		{
+			trans := glm.identity(glm.mat4)
+			trans = trans * glm.mat4Translate({0.5, -0.5, 0})
+			trans = trans * glm.mat4Rotate({0, 0, 1}, t)
+			gl.UniformMatrix4fv(uniforms["transform"].location, 1, false, &trans[0, 0])
 
-		// gl.UseProgram(shader_program)
-		// gl.BindVertexArray(vao_0)
-		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
+			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
+		}
+
+		{
+			trans := glm.identity(glm.mat4)
+			s := math.sin(t)
+			trans = trans * glm.mat4Scale({s, s, 0})
+			trans = trans * glm.mat4Translate({-0.5, 0.5, 0})
 
 
-		// gl.UseProgram(shader_program_0)
-		// gl.BindVertexArray(vao_1)
-		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
-
+			gl.UniformMatrix4fv(uniforms["transform"].location, 1, false, &trans[0, 0])
+			gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
+		}
 
 
 		sdl.GL_SwapWindow(window)	
 	}
 }
-
-vertex_shader_source: cstring = `#version 330 core
-
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-layout (location = 2) in vec2 aTexCoord;
-
-out vec3 ourColor;
-out vec2 TexCoord;
-
-uniform float xOffset;
-
-void main()
-{
-	gl_Position = vec4(aPos, 1.0);
-	ourColor = aColor;
-	TexCoord = aTexCoord;
-}
-`
-
-fragment_shader_source: cstring = `#version 330 core
-out vec4 FragColor;
-
-in vec3 ourColor;
-in vec2 TexCoord;
-
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-
-void main()
-{
-	FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);
-}
-`
-
-fragment_shader_0_source: cstring = `#version 330 core
-out vec4 FragColor;
-
-void main()
-{
-	FragColor = vec4(1.0f, 1.0f, 0.01f, 1.0f);
-}
-`
