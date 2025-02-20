@@ -14,6 +14,20 @@ SCREEN_SIZE :: [2]i32{800, 600}
 GL_VERSION_MAJOR :: 3
 GL_VERSION_MINOR :: 3
 
+Input :: struct {
+	ended_down: bool,
+	half_transitions: u32,
+}
+
+Actions :: enum {
+	Move_Forward,
+	Move_Backward,
+	Move_Left,
+	Move_Right,
+}
+
+input_state: [Actions]Input
+
 main :: proc() {
 	if !sdl.Init({.VIDEO}) {
 		fmt.eprintfln("SDL could not initialize! SDL_Error: %v\n", sdl.GetError())
@@ -33,6 +47,10 @@ main :: proc() {
 	); window == nil {
 		fmt.printf("Window could not be created! SDL_Error: %s\n", sdl.GetError())
 		return
+	}
+
+	if sdl.SetWindowRelativeMouseMode(window, true) {
+		fmt.eprintln("failed to grab mouse input")
 	}
 
 	gl_context := sdl.GL_CreateContext(window)
@@ -163,9 +181,6 @@ main :: proc() {
 	gl.Uniform1i(uniforms["texture1"].location, 0)
 	gl.Uniform1i(uniforms["texture2"].location, 1)
 
-	view := glm.identity(glm.mat4)
-	view = glm.mat4Translate({0, 0, -3}) * view
-
 	projection := glm.mat4Perspective(glm.radians_f32(45), 800.0 / 600.0, 0.1, 100.0)
 
 	cube_positions := []glm.vec3 {
@@ -181,9 +196,25 @@ main :: proc() {
 	    {-1.3,  1.0, -1.5},
 	}
 
+	camera_pos := glm.vec3 {0, 0, 3}
+	camera_front := glm.vec3 {0, 0, -1}
+	camera_up := glm.vec3 {0, 1, 0}
+	camera_speed: f32 = 3.5
+
 	start_tick := time.tick_now()
+
+	delta_time: f64 = 0
+	last_frame: f64 = 0
+	yaw: f32 = -90
+	pitch: f32
+	last_mouse_pos := [2]f32{f32(SCREEN_SIZE.x), f32(SCREEN_SIZE.y)} / 2
 	loop: for {
+
+
 		duration := time.tick_since(start_tick)
+		current_frame := time.duration_seconds(duration)
+		delta_time = current_frame - last_frame
+		last_frame = current_frame
 		t := f32(time.duration_seconds(duration))
 		for e: sdl.Event; sdl.PollEvent(&e); {
 			#partial switch e.type {
@@ -192,7 +223,57 @@ main :: proc() {
 			case .WINDOW_RESIZED:
 				we := e.window
 				gl.Viewport(0, 0, we.data1, we.data2)
+			case .KEY_DOWN, .KEY_UP:
+				k := e.key
+				is_down := e.type == .KEY_DOWN
+
+				#partial switch k.scancode {
+				case .W:
+					input_state[.Move_Forward].ended_down = is_down
+					input_state[.Move_Forward].half_transitions += 1
+
+				case .S:
+					input_state[.Move_Backward].ended_down = is_down
+					input_state[.Move_Backward].half_transitions += 1
+
+				case .A:
+					input_state[.Move_Left].ended_down = is_down					
+					input_state[.Move_Left].half_transitions += 1	
+				case .D:
+					input_state[.Move_Right].ended_down = is_down
+					input_state[.Move_Right].half_transitions += 1
+				case .ESCAPE:
+					break loop
+				}
+			case .MOUSE_MOTION:
+				m := e.motion
+				sensitivity: f32 = 0.1
+				x_offset := m.x - last_mouse_pos.x
+				y_offset := last_mouse_pos.y - m.y
+				x_offset *= sensitivity
+				y_offset *= sensitivity
+
+				last_mouse_pos = {m.x, m.y}
+				yaw += x_offset
+				pitch += y_offset
+				pitch = clamp(pitch, -89, 89)
 			}
+		}
+		if input_state[.Move_Forward].ended_down {
+			camera_pos += camera_speed * camera_front * f32(delta_time)
+		}
+		if input_state[.Move_Backward].ended_down {
+			camera_pos -= camera_speed * camera_front * f32(delta_time)
+		}
+		if input_state[.Move_Left].ended_down {
+			camera_pos -= glm.normalize(
+				glm.cross(camera_front, camera_up)
+			) * camera_speed * f32(delta_time)
+		}
+		if input_state[.Move_Right].ended_down {
+			camera_pos += glm.normalize(
+				glm.cross(camera_front, camera_up)
+			) * camera_speed * f32(delta_time)
 		}
 
 		// Draw
@@ -206,8 +287,25 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		gl.BindVertexArray(vao)
-		gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
 		gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
+
+		direction: glm.vec3
+		direction.x = math.cos(glm.radians(yaw)) * math.cos(glm.radians(pitch))
+		direction.y = math.sin(glm.radians(pitch))
+		direction.z = math.sin(glm.radians(yaw)) * math.cos(glm.radians(pitch))
+		camera_front := glm.normalize(direction)
+
+		radius: f32 = 10.0
+		cam_x := math.sin(t) * radius
+		cam_z := math.cos(t) * radius
+
+		view := glm.mat4LookAt(
+			camera_pos,
+			camera_pos + camera_front,
+			camera_up
+		)
+		gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+
 		for cube_position, i in cube_positions {
 
 			model := glm.identity(glm.mat4)
