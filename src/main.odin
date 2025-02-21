@@ -80,9 +80,8 @@ camera_get_view_matrix :: proc(camera: Camera) -> matrix[4,4]f32 {
 
 input_state: [Actions]Input
 
-first_mouse := false
-
 camera := camera_new({0, 0, 3})
+light_pos := glm.vec3 {1.2, 1, 2}
 
 main :: proc() {
 	if !sdl.Init({.VIDEO}) {
@@ -118,6 +117,12 @@ main :: proc() {
 	program, program_ok := gl.load_shaders_file("shader.vert", "shader.frag")
 	if !program_ok {
 		fmt.eprintfln("Failed to create GLSL Program")
+		return
+	}
+
+	light_program, light_program_ok := gl.load_shaders_file("shader.vert", "light_shader.frag")
+	if !light_program_ok {
+		fmt.eprintfln("Failed to create light GLSL Progra")
 		return
 	}
 
@@ -231,24 +236,22 @@ main :: proc() {
 		gl.GenerateMipmap(gl.TEXTURE_2D)
 	}
 
+	gl.BindVertexArray(0)
+
+	light_vao: u32
+	gl.GenVertexArrays(1, &light_vao)
+	gl.BindVertexArray(light_vao)
+
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(0))
+	gl.EnableVertexAttribArray(0)
+
 	gl.UseProgram(program)
 
 	uniforms := gl.get_uniforms_from_program(program)
-	gl.Uniform1i(uniforms["texture1"].location, 0)
-	gl.Uniform1i(uniforms["texture2"].location, 1)
-
-	cube_positions := []glm.vec3 {
-		{0, 0, 0},
-	    { 2.0,  5.0, -15.0},
-	    {-1.5, -2.2, -2.5},
-	    {-3.8, -2.0, -12.3},
-	    { 2.4, -0.4, -3.5},
-	    {-1.7,  3.0, -7.5},
-	    { 1.3, -2.0, -2.5},
-	    { 1.5,  2.0, -2.5},
-	    { 1.5,  0.2, -1.5},
-	    {-1.3,  1.0, -1.5},
-	}
+	gl.Uniform3f(uniforms["objectColor"].location, 1.0, 0.5, 0.31)
+	gl.Uniform3f(uniforms["lightColor"].location, 1, 1, 1)
 
 	start_tick := time.tick_now()
 
@@ -299,7 +302,6 @@ main :: proc() {
 				camera.pitch += y_offset
 
 				camera.pitch = clamp(camera.pitch, -89, 89)
-				fmt.printfln("cam y %v p %v", camera.yaw, camera.pitch)
 				camera_update_vectors(&camera)
 			case .MOUSE_WHEEL:
 				w := e.wheel
@@ -326,7 +328,7 @@ main :: proc() {
 		camera_update_vectors(&camera)
 
 		// Draw
-		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
+		gl.ClearColor(0, 0, 0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 
@@ -338,22 +340,33 @@ main :: proc() {
 		gl.BindVertexArray(vao)
 
 		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 800.0 / 600.0, 0.1, 100.0)
-		gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
-
+		
 		radius: f32 = 10.0
 		cam_x := math.sin(t) * radius
 		cam_z := math.cos(t) * radius
 
 		view := camera_get_view_matrix(camera)
-		gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
 
-		for cube_position, i in cube_positions {
+		{
+			gl.UseProgram(program)
+			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
+			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+			cube_position := glm.vec3 {1, 1, 1}
 			model := glm.identity(glm.mat4)
 			model = model * glm.mat4Translate(cube_position)
-			angle := 20.0 * f32(i + 1)
-			if i % 3 == 0 do angle *= math.sin(t)
-			model = model * glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
 			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])				
+
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)	
+		}
+		
+		{
+			gl.UseProgram(light_program)
+			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
+			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+			model := glm.identity(glm.mat4)
+			model = model * glm.mat4Translate(light_pos)
+			model = model * glm.mat4Scale({0.2, 0.2, 0.2})
+			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
 
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
