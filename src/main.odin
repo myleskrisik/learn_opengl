@@ -81,7 +81,6 @@ camera_get_view_matrix :: proc(camera: Camera) -> matrix[4,4]f32 {
 input_state: [Actions]Input
 
 camera := camera_new({0, 0, 3})
-light_pos := glm.vec3 {1.2, 1, 2}
 
 main :: proc() {
 	if !sdl.Init({.VIDEO}) {
@@ -127,47 +126,47 @@ main :: proc() {
 	}
 
 	vertices := []f32 {
-	    -0.5, -0.5, -0.5,  0.0, 0.0,
-	     0.5, -0.5, -0.5,  1.0, 0.0,
-	     0.5,  0.5, -0.5,  1.0, 1.0,
-	     0.5,  0.5, -0.5,  1.0, 1.0,
-	    -0.5,  0.5, -0.5,  0.0, 1.0,
-	    -0.5, -0.5, -0.5,  0.0, 0.0,
+	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+	     0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 
+	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
+	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
+	    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
+	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 
 
-	    -0.5, -0.5,  0.5,  0.0, 0.0,
-	     0.5, -0.5,  0.5,  1.0, 0.0,
-	     0.5,  0.5,  0.5,  1.0, 1.0,
-	     0.5,  0.5,  0.5,  1.0, 1.0,
-	    -0.5,  0.5,  0.5,  0.0, 1.0,
-	    -0.5, -0.5,  0.5,  0.0, 0.0,
+	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
+	     0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
+	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
+	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
+	    -0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
+	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
 
-	    -0.5,  0.5,  0.5,  1.0, 0.0,
-	    -0.5,  0.5, -0.5,  1.0, 1.0,
-	    -0.5, -0.5, -0.5,  0.0, 1.0,
-	    -0.5, -0.5, -0.5,  0.0, 1.0,
-	    -0.5, -0.5,  0.5,  0.0, 0.0,
-	    -0.5,  0.5,  0.5,  1.0, 0.0,
+	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
+	    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,
+	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+	    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,
+	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
 
-	     0.5,  0.5,  0.5,  1.0, 0.0,
-	     0.5,  0.5, -0.5,  1.0, 1.0,
-	     0.5, -0.5, -0.5,  0.0, 1.0,
-	     0.5, -0.5, -0.5,  0.0, 1.0,
-	     0.5, -0.5,  0.5,  0.0, 0.0,
-	     0.5,  0.5,  0.5,  1.0, 0.0,
+	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
+	     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,
+	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+	     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,
+	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
 
-	    -0.5, -0.5, -0.5,  0.0, 1.0,
-	     0.5, -0.5, -0.5,  1.0, 1.0,
-	     0.5, -0.5,  0.5,  1.0, 0.0,
-	     0.5, -0.5,  0.5,  1.0, 0.0,
-	    -0.5, -0.5,  0.5,  0.0, 0.0,
-	    -0.5, -0.5, -0.5,  0.0, 1.0,
+	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+	     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+	    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
 
-	    -0.5,  0.5, -0.5,  0.0, 1.0,
-	     0.5,  0.5, -0.5,  1.0, 1.0,
-	     0.5,  0.5,  0.5,  1.0, 0.0,
-	     0.5,  0.5,  0.5,  1.0, 0.0,
-	    -0.5,  0.5,  0.5,  0.0, 0.0,
-	    -0.5,  0.5, -0.5,  0.0, 1.0
+	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+	     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+	    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0
 	}
 
 
@@ -186,10 +185,10 @@ main :: proc() {
 	)
 
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(3 * size_of(f32)))
 	gl.EnableVertexAttribArray(1)
 
 	texture1: u32
@@ -244,7 +243,7 @@ main :: proc() {
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 5 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
 	gl.UseProgram(program)
@@ -253,8 +252,9 @@ main :: proc() {
 	gl.Uniform3f(uniforms["objectColor"].location, 1.0, 0.5, 0.31)
 	gl.Uniform3f(uniforms["lightColor"].location, 1, 1, 1)
 
-	start_tick := time.tick_now()
+	light_pos := glm.vec3 {1.2, 1, 2}
 
+	start_tick := time.tick_now()
 	delta_time: f64 = 0
 	last_frame: f64 = 0
 	loop: for {
@@ -327,10 +327,10 @@ main :: proc() {
 		}
 		camera_update_vectors(&camera)
 
-		// Draw
-		gl.ClearColor(0, 0, 0, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
+		// Draw
+		gl.ClearColor(0.1, 0.1, 0.1, 1.0)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
@@ -341,21 +341,20 @@ main :: proc() {
 
 		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 800.0 / 600.0, 0.1, 100.0)
 		
-		radius: f32 = 10.0
-		cam_x := math.sin(t) * radius
-		cam_z := math.cos(t) * radius
+		radius: f32 = 2.0
+		light_pos = {math.sin(t / 4) * radius, 1.3, math.cos(t / 4) * radius}
 
 		view := camera_get_view_matrix(camera)
 
 		{
 			gl.UseProgram(program)
+			gl.Uniform3f(uniforms["viewPos"].location, camera.position.x, camera.position.y, camera.position.z)
+			gl.Uniform3f(uniforms["lightPos"].location, light_pos.x, light_pos.y, light_pos.z)
 			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
 			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
-			cube_position := glm.vec3 {1, 1, 1}
 			model := glm.identity(glm.mat4)
-			model = model * glm.mat4Translate(cube_position)
 			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])				
-
+			gl.BindVertexArray(vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)	
 		}
 		
@@ -368,11 +367,12 @@ main :: proc() {
 			model = model * glm.mat4Scale({0.2, 0.2, 0.2})
 			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
 
+			gl.BindVertexArray(light_vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
 
 
-		sdl.GL_SwapWindow(window)	
+		sdl.GL_SwapWindow(window)
 	}
 }
