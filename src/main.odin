@@ -247,16 +247,55 @@ main :: proc() {
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	}
 
-
-	gl.UseProgram(program)
-	gl.Uniform1i(uniforms["material.diffuse"].location, 0)
-	gl.Uniform1i(uniforms["material.specular"].location, 1)
-
 	light_pos := glm.vec3 {1.2, 1, 2}
 
 	start_tick := time.tick_now()
 	delta_time: f64 = 0
 	last_frame: f64 = 0
+
+	cube_positions := []glm.vec3 {
+	    { 0.0,  0.0,  0.0},
+	    { 2.0,  5.0, -15.0},
+	    {-1.5, -2.2, -2.5},
+	    {-3.8, -2.0, -12.3},
+	    { 2.4, -0.4, -3.5},
+	    {-1.7,  3.0, -7.5},
+	    { 1.3, -2.0, -2.5},
+	    { 1.5,  2.0, -2.5},
+	    { 1.5,  0.2, -1.5},
+	    {-1.3,  1.0, -1.},
+	}
+
+	point_light_positions := []glm.vec3 {
+		{ 0.7,  0.2,  2.0},
+		{ 2.3, -3.3, -4.0},
+		{-4.0,  2.0, -12.0},
+		{ 0.0,  0.0, -3.}
+	}
+
+	gl.UseProgram(program)
+	gl.Uniform1i(uniforms["material.diffuse"].location, 0)
+	gl.Uniform1i(uniforms["material.specular"].location, 1)
+
+	light_color := glm.vec3 {1, 1, 1}
+	ambient_color := light_color * glm.vec3 {0.1, 0.1, 0.1}
+	diffuse_color := light_color * glm.vec3 {0.5, 0.5, 0.5}
+
+	for pos, i in point_light_positions {
+		gl.Uniform3f(uniforms[fmt.tprintf("pointLights[%v].position", i)].location, pos.x, pos.y, pos.z)
+		gl.Uniform1f(uniforms[fmt.tprintf("pointLights[%v].constant", i)].location, 1)
+		gl.Uniform1f(uniforms[fmt.tprintf("pointLights[%v].linear", i)].location, 0.09)
+		gl.Uniform1f(uniforms[fmt.tprintf("pointLights[%v].quadratic", i)].location, 0.032)
+		gl.Uniform3f(uniforms[fmt.tprintf("pointLights[%v].ambient", i)].location, ambient_color.x, ambient_color.y, ambient_color.z)
+		gl.Uniform3f(uniforms[fmt.tprintf("pointLights[%v].diffuse", i)].location, diffuse_color.x, diffuse_color.y, diffuse_color.z)
+		gl.Uniform3f(uniforms[fmt.tprintf("pointLights[%v].specular", i)].location, 1, 1, 1)
+	}
+
+	gl.Uniform3f(uniforms["DirLight.direction"].location, -0.2, -1, -0.3)
+	gl.Uniform3f(uniforms["DirLight.ambient"].location, ambient_color.x, ambient_color.y, ambient_color.z)
+	gl.Uniform3f(uniforms["DirLight.diffuse"].location, diffuse_color.x, diffuse_color.y, diffuse_color.z)
+	gl.Uniform3f(uniforms["DirLight.specular"].location, 1, 1, 1)
+
 	loop: for {
 		duration := time.tick_since(start_tick)
 		current_frame := time.duration_seconds(duration)
@@ -337,35 +376,14 @@ main :: proc() {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
-		
-		radius: f32 = 1.5
-		light_pos = {math.sin(t / 4) * radius, 1.3, math.cos(t / 4) * radius}
 
 		view := camera_get_view_matrix(camera)
-
-		light_color: glm.vec3
-		light_color.x = math.sin(t * 0.6)
-		light_color.y = math.sin(t)
-		light_color.z = math.sin(t * 0.2)
-		// light_color = {1, 1, 1}
-
-		ambient_color := light_color * glm.vec3 {0.2, 0.2, 0.2}
-		diffuse_color := light_color * glm.vec3 {0.5, 0.5, 0.5}
 
 		{
 			gl.UseProgram(program)
 			gl.Uniform3f(uniforms["viewPos"].location, camera.position.x, camera.position.y, camera.position.z)
-
-			gl.Uniform3f(uniforms["light.position"].location, light_pos.x, light_pos.y, light_pos.z)
-			gl.Uniform3f(uniforms["light.ambient"].location, ambient_color.x, ambient_color.y, ambient_color.z)
-			gl.Uniform3f(uniforms["light.diffuse"].location, diffuse_color.x, diffuse_color.y, diffuse_color.z)
-			gl.Uniform3f(uniforms["light.specular"].location, 1, 1, 1)
-
 			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
 			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
-
-			model := glm.identity(glm.mat4)
-			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
 
 			gl.ActiveTexture(gl.TEXTURE0)
 			gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
@@ -373,10 +391,17 @@ main :: proc() {
 			gl.ActiveTexture(gl.TEXTURE1)
 			gl.BindTexture(gl.TEXTURE_2D, specular_map)
 
-			gl.BindVertexArray(vao)
-			gl.DrawArrays(gl.TRIANGLES, 0, 36)	
+			for cube_pos, i in cube_positions {
+				model := glm.identity(glm.mat4)
+				model = model * glm.mat4Translate(cube_pos)
+				angle := 20.0 * f32(i)
+				model = model * glm.mat4Rotate({1, 0.3, 0.5}, glm.radians(angle))
+				gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
+
+				gl.BindVertexArray(vao)
+				gl.DrawArrays(gl.TRIANGLES, 0, 36)	
+			}
 		}
-		
 		{
 			gl.UseProgram(light_program)
 			gl.Uniform3f(light_uniforms["lightColor"].location, light_color.x, light_color.y, light_color.z)
@@ -384,17 +409,17 @@ main :: proc() {
 			gl.UniformMatrix4fv(light_uniforms["projection"].location, 1, false, &projection[0, 0])
 			gl.UniformMatrix4fv(light_uniforms["view"].location, 1, false, &view[0, 0])
 
-			model := glm.identity(glm.mat4)
-			model = model * glm.mat4Translate(light_pos)
-			model = model * glm.mat4Scale({0.2, 0.2, 0.2})
-			gl.UniformMatrix4fv(light_uniforms["model"].location, 1, false, &model[0, 0])
+			for pos in point_light_positions {
+				model := glm.identity(glm.mat4)
+				model = model * glm.mat4Translate(pos)
+				model = model * glm.mat4Scale({0.2, 0.2, 0.2})
+				gl.UniformMatrix4fv(light_uniforms["model"].location, 1, false, &model[0, 0])
 
-			gl.BindVertexArray(light_vao)
-			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+				gl.BindVertexArray(light_vao)
+				gl.DrawArrays(gl.TRIANGLES, 0, 36)	
+			}
+			
 		}
-
-
-
 		sdl.GL_SwapWindow(window)
 	}
 }
