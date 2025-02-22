@@ -118,55 +118,58 @@ main :: proc() {
 		fmt.eprintfln("Failed to create GLSL Program")
 		return
 	}
+	uniforms := gl.get_uniforms_from_program(program)
 
 	light_program, light_program_ok := gl.load_shaders_file("shader.vert", "light_shader.frag")
 	if !light_program_ok {
 		fmt.eprintfln("Failed to create light GLSL Progra")
 		return
 	}
+	light_uniforms := gl.get_uniforms_from_program(light_program)
 
 	vertices := []f32 {
-	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
-	     0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 
-	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
-	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
-	    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 
-	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 
+	    // positions       // normals        // texture coords
+	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 0.0,
+	     0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 0.0,
+	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 1.0,
+	     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 1.0,
+	    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 1.0,
+	    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 0.0,
 
-	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
-	     0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
-	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
-	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
-	    -0.5,  0.5,  0.5,  0.0,  0.0, 1.0,
-	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,
+	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,   0.0, 0.0,
+	     0.5, -0.5,  0.5,  0.0,  0.0, 1.0,   1.0, 0.0,
+	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,   1.0, 1.0,
+	     0.5,  0.5,  0.5,  0.0,  0.0, 1.0,   1.0, 1.0,
+	    -0.5,  0.5,  0.5,  0.0,  0.0, 1.0,   0.0, 1.0,
+	    -0.5, -0.5,  0.5,  0.0,  0.0, 1.0,   0.0, 0.0,
 
-	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
-	    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,
-	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
-	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
-	    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,
-	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
+	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,  1.0, 0.0,
+	    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,  1.0, 1.0,
+	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,  0.0, 1.0,
+	    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,  0.0, 1.0,
+	    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,  0.0, 0.0,
+	    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,  1.0, 0.0,
 
-	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
-	     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,
-	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
-	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
-	     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,
-	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
+	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,  1.0, 0.0,
+	     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,  1.0, 1.0,
+	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,  0.0, 1.0,
+	     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,  0.0, 1.0,
+	     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,  0.0, 0.0,
+	     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,  1.0, 0.0,
 
-	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
-	     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
-	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-	    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  0.0, 1.0,
+	     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  1.0, 1.0,
+	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  1.0, 0.0,
+	     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  1.0, 0.0,
+	    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  0.0, 0.0,
+	    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  0.0, 1.0,
 
-	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
-	     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
-	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-	    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0
+	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0,
+	     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  1.0, 1.0,
+	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  1.0, 0.0,
+	     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  1.0, 0.0,
+	    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  0.0, 0.0,
+	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0
 	}
 
 
@@ -184,58 +187,14 @@ main :: proc() {
 		gl.STATIC_DRAW
 	)
 
-
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(3 * size_of(f32)))
 	gl.EnableVertexAttribArray(1)
 
-	texture1: u32
-	gl.GenTextures(1, &texture1)
-	gl.BindTexture(gl.TEXTURE_2D, texture1)
-
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-	{
-		width, height, nr_channels: i32
-		data := stbi.load("container.jpg", &width, &height, &nr_channels, 0)
-
-		if data == nil {
-			fmt.printfln("failed to load image")
-			return
-		}
-
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
-		gl.GenerateMipmap(gl.TEXTURE_2D)
-	}
-
-
-	texture2: u32
-	gl.GenTextures(1, &texture2)
-	gl.BindTexture(gl.TEXTURE_2D, texture2)
-	{
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-
-		width, height, nr_channels: i32
-		stbi.set_flip_vertically_on_load(1)
-		data := stbi.load("awesomeface.png", &width, &height, &nr_channels, 0)
-
-		if data == nil {
-			fmt.printfln("failed to load image")
-			return
-		}
-
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
-		gl.GenerateMipmap(gl.TEXTURE_2D)
-	}
-
-	gl.BindVertexArray(0)
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 8 * size_of(f32), uintptr(6 * size_of(f32)))
+	gl.EnableVertexAttribArray(2)
 
 	light_vao: u32
 	gl.GenVertexArrays(1, &light_vao)
@@ -243,14 +202,55 @@ main :: proc() {
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 6 * size_of(f32), uintptr(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 8 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
 
-	gl.UseProgram(program)
+	diffuse_map: u32
+	gl.GenTextures(1, &diffuse_map)
+	{
+		width, height, nr_channels: i32
+		data := stbi.load("container2.png", &width, &height, &nr_channels, 0)
 
-	uniforms := gl.get_uniforms_from_program(program)
-	gl.Uniform3f(uniforms["objectColor"].location, 1.0, 0.5, 0.31)
-	gl.Uniform3f(uniforms["lightColor"].location, 1, 1, 1)
+		if data == nil {
+			fmt.printfln("failed to load image")
+			return
+		}
+
+		gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
+
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	}
+
+	specular_map: u32
+	gl.GenTextures(1, &specular_map)
+	{
+		width, height, nr_channels: i32
+		data := stbi.load("container2_specular.png", &width, &height, &nr_channels, 0)
+
+		if data == nil {
+			fmt.printfln("failed to load image")
+			return
+		}
+
+		gl.BindTexture(gl.TEXTURE_2D, specular_map)
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
+
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	}
+
+
+	gl.UseProgram(program)
+	gl.Uniform1i(uniforms["material.diffuse"].location, 0)
+	gl.Uniform1i(uniforms["material.specular"].location, 1)
 
 	light_pos := glm.vec3 {1.2, 1, 2}
 
@@ -327,45 +327,67 @@ main :: proc() {
 		}
 		camera_update_vectors(&camera)
 
+		gl.UseProgram(program)
+
+		// Material
+		gl.Uniform1f(uniforms["material.shininess"].location, 32)
 
 		// Draw
 		gl.ClearColor(0.1, 0.1, 0.1, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-		gl.ActiveTexture(gl.TEXTURE0)
-		gl.BindTexture(gl.TEXTURE_2D, texture1)
-		gl.ActiveTexture(gl.TEXTURE1)
-		gl.BindTexture(gl.TEXTURE_2D, texture2)
-
-		gl.BindVertexArray(vao)
-
-		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 800.0 / 600.0, 0.1, 100.0)
+		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
 		
-		radius: f32 = 2.0
+		radius: f32 = 1.5
 		light_pos = {math.sin(t / 4) * radius, 1.3, math.cos(t / 4) * radius}
 
 		view := camera_get_view_matrix(camera)
 
+		light_color: glm.vec3
+		light_color.x = math.sin(t * 0.6)
+		light_color.y = math.sin(t)
+		light_color.z = math.sin(t * 0.2)
+		// light_color = {1, 1, 1}
+
+		ambient_color := light_color * glm.vec3 {0.2, 0.2, 0.2}
+		diffuse_color := light_color * glm.vec3 {0.5, 0.5, 0.5}
+
 		{
 			gl.UseProgram(program)
 			gl.Uniform3f(uniforms["viewPos"].location, camera.position.x, camera.position.y, camera.position.z)
-			gl.Uniform3f(uniforms["lightPos"].location, light_pos.x, light_pos.y, light_pos.z)
+
+			gl.Uniform3f(uniforms["light.position"].location, light_pos.x, light_pos.y, light_pos.z)
+			gl.Uniform3f(uniforms["light.ambient"].location, ambient_color.x, ambient_color.y, ambient_color.z)
+			gl.Uniform3f(uniforms["light.diffuse"].location, diffuse_color.x, diffuse_color.y, diffuse_color.z)
+			gl.Uniform3f(uniforms["light.specular"].location, 1, 1, 1)
+
 			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
 			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+
 			model := glm.identity(glm.mat4)
-			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])				
+			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
+
+			gl.ActiveTexture(gl.TEXTURE0)
+			gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
+
+			gl.ActiveTexture(gl.TEXTURE1)
+			gl.BindTexture(gl.TEXTURE_2D, specular_map)
+
 			gl.BindVertexArray(vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)	
 		}
 		
 		{
 			gl.UseProgram(light_program)
-			gl.UniformMatrix4fv(uniforms["projection"].location, 1, false, &projection[0, 0])
-			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
+			gl.Uniform3f(light_uniforms["lightColor"].location, light_color.x, light_color.y, light_color.z)
+
+			gl.UniformMatrix4fv(light_uniforms["projection"].location, 1, false, &projection[0, 0])
+			gl.UniformMatrix4fv(light_uniforms["view"].location, 1, false, &view[0, 0])
+
 			model := glm.identity(glm.mat4)
 			model = model * glm.mat4Translate(light_pos)
 			model = model * glm.mat4Scale({0.2, 0.2, 0.2})
-			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
+			gl.UniformMatrix4fv(light_uniforms["model"].location, 1, false, &model[0, 0])
 
 			gl.BindVertexArray(light_vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
