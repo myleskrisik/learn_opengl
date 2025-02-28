@@ -7,12 +7,7 @@ in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
 
-struct Material {
-	sampler2D diffuse;
-	sampler2D specular;
-	float shininess;
-};
-uniform Material material;
+uniform sampler2D diffuse;
 
 struct DirLight {
 	vec3 direction;
@@ -62,11 +57,11 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
 	float diff = max(dot(normal, lightDir), 0.0);
 	// specular shading
 	vec3 reflectDir = reflect(-lightDir, normal);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
 	// combine results
-	vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-	vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(diffuse, TexCoords));
+	vec3 diffuse = light.diffuse * diff * vec3(texture(diffuse, TexCoords));
+	vec3 specular = light.specular * spec * 0.5;
 	return (ambient + diffuse + specular);
 }
 
@@ -76,15 +71,15 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
 	float diff = max(dot(normal, lightDir), 0.0);
 	// specular shading
 	vec3 reflectDir = reflect(-lightDir, normal);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
 	// attenuation
 	float distance = length(light.position - fragPos);
 	float attenuation = 1.0 / (light.constant + light.linear * distance +
 		light.quadratic * (distance * distance));
 
-	vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-	vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(diffuse, TexCoords));
+	vec3 diffuse = light.diffuse * diff * vec3(texture(diffuse, TexCoords));
+	vec3 specular = light.specular * spec * 0.5;
 	ambient *= attenuation;
 	diffuse *= attenuation;
 	specular *= attenuation;
