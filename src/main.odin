@@ -12,7 +12,7 @@ import stbi "vendor:stb/image"
 import glm "core:math/linalg/glsl"
 import gltf "vendor:cgltf"
 
-SCREEN_SIZE :: [2]i32{800, 600}
+SCREEN_SIZE :: [2]i32{640, 360}
 
 GL_VERSION_MAJOR :: 3
 GL_VERSION_MINOR :: 3
@@ -106,8 +106,8 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 
 	assert(len(data.nodes) == 1)
 
-	meshes := make([]Mesh, len(data.meshes))
-	for mesh, i in data.meshes {
+	meshes := make([dynamic]Mesh)
+	for mesh in data.meshes {
 		for primitive in mesh.primitives {
 			if primitive.type != .triangles do continue
 			
@@ -143,10 +143,12 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 			gl.BindTexture(gl.TEXTURE_2D, mesh_texture.id)
 			gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, format, gl.UNSIGNED_BYTE, img_data)
 			gl.GenerateMipmap(mesh_texture.id)
+			num_mip_maps := math.floor(math.log2(max(f32(width), f32(height)))) + 1
+			fmt.printfln("mip maps %v", num_mip_maps)
 
 			gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, sampler.wrap_s)
 			gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, sampler.wrap_t)
-			gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, sampler.min_filter)
+			gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 			gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, sampler.mag_filter)
 			fmt.println(sampler.min_filter)
 			fmt.println(sampler.mag_filter)
@@ -186,7 +188,8 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 			gl.GenVertexArrays(1, &vao)
 			gl.GenBuffers(1, &vbo)
 			gl.GenBuffers(1, &ebo)
-			meshes[i] = mesh_init(mesh_texture, i32(primitive.indices.count), vao, vbo, ebo)
+			new_mesh := mesh_init(mesh_texture, i32(primitive.indices.count), vao, vbo, ebo)
+			append(&meshes, new_mesh)
 
 			gl.BindVertexArray(vao)
 
@@ -211,7 +214,7 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 				}
 				vertices[j] = v
 			}
-			gl.BufferData(gl.ARRAY_BUFFER, len(vertices) * size_of(vertices), raw_data(vertices), gl.STATIC_DRAW)
+			gl.BufferData(gl.ARRAY_BUFFER, len(vertices) * size_of(Vertex), raw_data(vertices), gl.STATIC_DRAW)
 			delete(vertices)
 
 			// Load indices
@@ -224,7 +227,7 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 				indices[j] = index
 			}
 			gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-			gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices) * size_of(indices), raw_data(indices), gl.STATIC_DRAW)
+			gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices) * size_of(u32), raw_data(indices), gl.STATIC_DRAW)
 			delete(indices)
 
 			// Set Vertex Attributes Pointers
@@ -240,7 +243,7 @@ model_load :: proc(path: cstring) -> (Model, bool) {
 			gl.BindVertexArray(0)
 		}
 	}
-	return model_init(meshes), true
+	return model_init(meshes[:]), true
 }
 
 model_draw :: proc(model: Model, shader_program: u32, uniforms: gl.Uniforms) {
@@ -288,7 +291,7 @@ camera_get_view_matrix :: proc(camera: Camera) -> matrix[4,4]f32 {
 
 input_state: [Actions]Input
 
-camera := camera_new({0, 0, 3})
+camera := camera_new({0, 7, 10}, pitch=-45)
 
 main :: proc() {
 	if !sdl.Init({.VIDEO}) {
@@ -311,10 +314,6 @@ main :: proc() {
 		return
 	}
 
-	if sdl.SetWindowRelativeMouseMode(window, true) {
-		fmt.eprintln("failed to grab mouse input")
-	}
-
 	gl_context := sdl.GL_CreateContext(window)
 
 	gl.load_up_to(GL_VERSION_MAJOR, GL_VERSION_MINOR, sdl.gl_set_proc_address)
@@ -327,76 +326,6 @@ main :: proc() {
 		return
 	}
 	uniforms := gl.get_uniforms_from_program(program)
-
-	light_program, light_program_ok := gl.load_shaders_file("shader.vert", "light_shader.frag")
-	if !light_program_ok {
-		fmt.eprintfln("Failed to create light GLSL Progra")
-		return
-	}
-	light_uniforms := gl.get_uniforms_from_program(light_program)
-
-	vertices := []f32 {
-	    // positions
-	    -0.5, -0.5, -0.5,
-	     0.5, -0.5, -0.5,
-	     0.5,  0.5, -0.5,
-	     0.5,  0.5, -0.5,
-	    -0.5,  0.5, -0.5,
-	    -0.5, -0.5, -0.5,
-
-	    -0.5, -0.5,  0.5,
-	     0.5, -0.5,  0.5,
-	     0.5,  0.5,  0.5,
-	     0.5,  0.5,  0.5,
-	    -0.5,  0.5,  0.5,
-	    -0.5, -0.5,  0.5,
-
-	    -0.5,  0.5,  0.5,
-	    -0.5,  0.5, -0.5,
-	    -0.5, -0.5, -0.5,
-	    -0.5, -0.5, -0.5,
-	    -0.5, -0.5,  0.5,
-	    -0.5,  0.5,  0.5,
-
-	     0.5,  0.5,  0.5,
-	     0.5,  0.5, -0.5,
-	     0.5, -0.5, -0.5,
-	     0.5, -0.5, -0.5,
-	     0.5, -0.5,  0.5,
-	     0.5,  0.5,  0.5,
-
-	    -0.5, -0.5, -0.5,
-	     0.5, -0.5, -0.5,
-	     0.5, -0.5,  0.5,
-	     0.5, -0.5,  0.5,
-	    -0.5, -0.5,  0.5,
-	    -0.5, -0.5, -0.5,
-
-	    -0.5,  0.5, -0.5,
-	     0.5,  0.5, -0.5,
-	     0.5,  0.5,  0.5,
-	     0.5,  0.5,  0.5,
-	    -0.5,  0.5,  0.5,
-	    -0.5,  0.5, -0.5,
-	}
-
-	light_vao, vbo: u32
-	gl.GenBuffers(1, &vbo)
-	gl.GenVertexArrays(1, &light_vao)
-	gl.BindVertexArray(light_vao)
-
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-
-	gl.BufferData(
-		gl.ARRAY_BUFFER,
-		len(vertices) * size_of(vertices),
-		raw_data(vertices),
-		gl.STATIC_DRAW
-	)
-
-
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3 * size_of(f32), uintptr(0))
-	gl.EnableVertexAttribArray(0)
 
 	light_pos := glm.vec3 {1.2, 1, 2}
 
@@ -457,56 +386,44 @@ main :: proc() {
 				is_down := e.type == .KEY_DOWN
 
 				#partial switch k.scancode {
-				case .W:
+				case .UP:
 					input_state[.Move_Forward].ended_down = is_down
 					input_state[.Move_Forward].half_transitions += 1
 
-				case .S:
+				case .DOWN:
 					input_state[.Move_Backward].ended_down = is_down
 					input_state[.Move_Backward].half_transitions += 1
 
-				case .A:
+				case .LEFT:
 					input_state[.Move_Left].ended_down = is_down					
 					input_state[.Move_Left].half_transitions += 1	
-				case .D:
+				case .RIGHT:
 					input_state[.Move_Right].ended_down = is_down
 					input_state[.Move_Right].half_transitions += 1
 				case .ESCAPE:
 					break loop
+
 				}
-			case .MOUSE_MOTION:
-				m := e.motion
-
-				x_offset := m.xrel * camera.mouse_sensitivity
-				y_offset := -m.yrel * camera.mouse_sensitivity
-
-				camera.yaw += x_offset
-				camera.pitch += y_offset
-
-				camera.pitch = clamp(camera.pitch, -89, 89)
-				camera_update_vectors(&camera)
 			case .MOUSE_WHEEL:
 				w := e.wheel
-				camera.zoom -= w.y
-				camera.zoom = clamp(camera.zoom, 1, 60)
+				camera.zoom += w.y
+				camera.zoom = clamp(camera.zoom, 1, 200)
 			}
+
 		}
 		if input_state[.Move_Forward].ended_down {
-			camera.position += camera.movement_speed * camera.front * f32(delta_time)
+			camera.position.z -= camera.movement_speed * f32(delta_time)
 		}
 		if input_state[.Move_Backward].ended_down {
-			camera.position -= camera.movement_speed * camera.front * f32(delta_time)
+			camera.position.z += camera.movement_speed * f32(delta_time)
 		}
 		if input_state[.Move_Left].ended_down {
-			camera.position -= glm.normalize(
-				glm.cross(camera.front, camera.up)
-			) * camera.movement_speed * f32(delta_time)
+			camera.position.x -= camera.movement_speed * f32(delta_time)
 		}
 		if input_state[.Move_Right].ended_down {
-			camera.position += glm.normalize(
-				glm.cross(camera.front, camera.up)
-			) * camera.movement_speed * f32(delta_time)
+			camera.position.x += camera.movement_speed * f32(delta_time)
 		}
+
 		camera_update_vectors(&camera)
 
 		gl.UseProgram(program)
@@ -515,7 +432,12 @@ main :: proc() {
 		gl.ClearColor(0.8, 0.8, 0.8, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-		projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
+		aspect := f32(SCREEN_SIZE.x) / f32(SCREEN_SIZE.y)
+		width := 1000 / camera.zoom
+		height := width / aspect
+
+		// projection := glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
+		projection := glm.mat4Ortho3d(-width / 2, width / 2, -height/2, height / 2, 0.1, 100)
 
 		view := camera_get_view_matrix(camera)
 		{
@@ -525,28 +447,10 @@ main :: proc() {
 			gl.UniformMatrix4fv(uniforms["view"].location, 1, false, &view[0, 0])
 
 			model := glm.identity(glm.mat4)
-			model = model * glm.mat4Scale({1, 1, 1})
-			model = model * glm.mat4Translate({0, -1.5, 0})
+			model = model * glm.mat4Scale({0.4, 0.4, 0.4})
+			model = model * glm.mat4Translate({0, 0, 0})
 			gl.UniformMatrix4fv(uniforms["model"].location, 1, false, &model[0, 0])
 			model_draw(cart_model, program, uniforms)
-		}
-		{
-			gl.UseProgram(light_program)
-			gl.Uniform3f(light_uniforms["lightColor"].location, light_color.x, light_color.y, light_color.z)
-
-			gl.UniformMatrix4fv(light_uniforms["projection"].location, 1, false, &projection[0, 0])
-			gl.UniformMatrix4fv(light_uniforms["view"].location, 1, false, &view[0, 0])
-
-			for pos in point_light_positions {
-				model := glm.identity(glm.mat4)
-				model = model * glm.mat4Translate(pos)
-				model = model * glm.mat4Scale({0.2, 0.2, 0.2})
-				gl.UniformMatrix4fv(light_uniforms["model"].location, 1, false, &model[0, 0])
-
-				gl.BindVertexArray(light_vao)
-				gl.DrawArrays(gl.TRIANGLES, 0, 36)	
-			}
-			
 		}
 		sdl.GL_SwapWindow(window)
 	}
