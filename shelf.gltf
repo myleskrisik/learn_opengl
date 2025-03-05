@@ -15,7 +15,7 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SI_Prop_ShoppingTrolley_01.001"
+			"name":"SI_Prop_Shelf_Isle_End_01"
 		}
 	],
 	"materials":[
@@ -27,13 +27,13 @@
 					"index":0
 				},
 				"metallicFactor":0,
-				"roughnessFactor":0.6000000238418579
+				"roughnessFactor":0.5
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh.001",
+			"name":"Mesh.018",
 			"primitives":[
 				{
 					"attributes":{
@@ -64,61 +64,61 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":569,
+			"count":172,
 			"max":[
-				0.5431098341941833,
-				1.5019762516021729,
-				0.8959049582481384
+				0.011154375970363617,
+				0.503713846206665,
+				0.7003855109214783
 			],
 			"min":[
-				-0.5431098341941833,
-				-3.916125024261419e-08,
-				-0.8959048986434937
+				-0.1654798537492752,
+				0.014583622105419636,
+				-0.9681136608123779
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":569,
+			"count":172,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":569,
+			"count":172,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":876,
+			"count":252,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":6828,
+			"byteLength":2064,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6828,
-			"byteOffset":6828,
+			"byteLength":2064,
+			"byteOffset":2064,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4552,
-			"byteOffset":13656,
+			"byteLength":1376,
+			"byteOffset":4128,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1752,
-			"byteOffset":18208,
+			"byteLength":504,
+			"byteOffset":5504,
 			"target":34963
 		}
 	],
@@ -130,8 +130,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":19960,
-			"uri":"cart.bin"
+			"byteLength":6008,
+			"uri":"shelf.bin"
 		}
 	]
 }
