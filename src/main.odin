@@ -13,15 +13,18 @@ import glm "core:math/linalg/glsl"
 import gltf "vendor:cgltf"
 
 SCREEN_SIZE :: [2]i32{640, 360}
+DEFAULT_OTRHO_POS :: glm.vec3{0, 7, 4}
+DEFAULT_OTRHO_PITCH :: -50
+DEFAULT_ORTHO_YAW :: -90
+
 
 GL_VERSION_MAJOR :: 3
 GL_VERSION_MINOR :: 3
 
-FREE_CAM :: false
-
 input_state: [Actions]Input
 
-camera := camera_new({0, 7, 4}, pitch=-50)
+camera := camera_new(DEFAULT_OTRHO_POS, pitch=DEFAULT_OTRHO_PITCH, yaw=DEFAULT_ORTHO_YAW)
+free_cam := false
 
 main :: proc() {
 	if !sdl.Init({.VIDEO}) {
@@ -44,7 +47,7 @@ main :: proc() {
 		return
 	}
 
-	if FREE_CAM {
+	if free_cam {
 		if sdl.SetWindowRelativeMouseMode(window, true) {
 			fmt.eprintln("failed to grab mouse input")
 		}	
@@ -216,10 +219,30 @@ main :: proc() {
 					input_state[.Move_Right].half_transitions += 1
 				case .ESCAPE:
 					break loop
+				case .F:
+					if !is_down do continue
+					free_cam = !free_cam
+					if !free_cam {
+						camera.position = DEFAULT_OTRHO_POS
+						camera.pitch = DEFAULT_OTRHO_PITCH
+						camera.yaw = DEFAULT_ORTHO_YAW
+					} 
+					_ = sdl.SetWindowRelativeMouseMode(window, free_cam)
+				case .Q:
+					if free_cam || !is_down do continue
+					camera.pitch += 5
+					camera.pitch = clamp(camera.pitch, -85, 0)
+					fmt.println(camera.pitch)
+
+				case .E:
+					if free_cam || !is_down do continue
+					camera.pitch -= 5
+					camera.pitch = clamp(camera.pitch, -85, 0)
+					fmt.println(camera.pitch)
 
 				}
 			case .MOUSE_MOTION:
-				if !FREE_CAM do continue
+				if !free_cam do continue
 				m := e.motion
 
 				x_offset := m.xrel * camera.mouse_sensitivity
@@ -237,7 +260,7 @@ main :: proc() {
 			}
 
 		}
-		if FREE_CAM {
+		if free_cam {
 			if input_state[.Move_Forward].ended_down {
 				camera.position += camera.movement_speed * camera.front * f32(delta_time)
 			}
@@ -283,7 +306,7 @@ main :: proc() {
 		height := width / aspect
 
 		projection := glm.mat4Ortho3d(-width / 2, width / 2, -height/2, height / 2, 0.1, 100)
-		if FREE_CAM do projection = glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
+		if free_cam do projection = glm.mat4Perspective(glm.radians_f32(camera.zoom), 1600.0 / 900.0, 0.1, 100.0)
 
 		view := camera_get_view_matrix(camera)
 		{
